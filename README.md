@@ -1,36 +1,141 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+```markdown
+# AI Job Interview Coach
 
-## Getting Started
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![CI/CD](https://github.com/yourusername/ai-interview-coach/actions/workflows/main.yml/badge.svg)](https://github.com/yourusername/ai-interview-coach/actions)
+[![Deployed on Vercel](https://vercel.com/button)](https://your-app.vercel.app)
 
-First, run the development server:
+A voice-powered AI mock interview platform that helps users practice job interviews with real-time feedback and personalized reports.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## ✨ Features
+
+- **Realistic Mock Interviews**  
+  - Industry-specific questions (Tech, Sales, Healthcare)
+  - Dynamic follow-up questions based on responses
+- **AI-Powered Analysis**  
+  - Real-time speech metrics (filler words, pace, tone)
+  - GPT-4 generated feedback reports
+- **Flexible Authentication**  
+  - Guest sessions (IP-based tracking)
+  - Google/Email login (after 2 sessions)
+- **Session History**  
+  - Review past performance
+  - Track improvement over time
+
+## 🛠 Tech Stack
+
+| Component          | Technology                                                                 |
+|--------------------|---------------------------------------------------------------------------|
+| Frontend           | Next.js 14 (App Router), TypeScript, Tailwind CSS                         |
+| Voice AI           | [Vapi.ai](https://vapi.ai) (`@vapi-ai/web`)                              |
+| Database           | Supabase PostgreSQL (with Prisma ORM)                                    |
+| Authentication     | NextAuth.js (Google + Email/Password)                                    |
+| AI                 | OpenAI GPT-4-turbo (Reports) + Vapi Speech Analytics                     |
+| Hosting            | Vercel (Frontend + Serverless Functions)                                 |
+| CI/CD              | GitHub Actions                                                           |
+
+## 📊 Architecture
+
+```mermaid
+flowchart TD
+    A[User] --> B[Next.js Frontend]
+    B --> C[Vapi.ai Voice Stream]
+    C --> D[Next.js API Routes]
+    D --> E[(Supabase DB)]
+    D --> F[OpenAI]
+    G[GitHub Actions] --> H[Vercel]
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🚀 Getting Started
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Prerequisites
+- Node.js v18+
+- Supabase account
+- Vapi.ai API key
+- OpenAI API key
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### Installation
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/yourusername/ai-interview-coach.git
+   cd ai-interview-coach
+   ```
 
-## Learn More
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
 
-To learn more about Next.js, take a look at the following resources:
+3. Set up environment variables:
+   ```env
+   # .env.local
+   DATABASE_URL="postgresql://..."
+   VAPI_API_KEY="your_vapi_key"
+   OPENAI_API_KEY="your_openai_key"
+   NEXTAUTH_SECRET="your_secret"
+   ```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+4. Initialize database:
+   ```bash
+   npx prisma migrate dev
+   ```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Running Locally
+```bash
+npm run dev
+```
 
-## Deploy on Vercel
+## 🌐 Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+1. Push to GitHub - triggers CI/CD pipeline:
+   ```mermaid
+   flowchart LR
+     A[Git Push] --> B[Run Tests]
+     B --> C{Pass?}
+     C -->|Yes| D[Deploy to Vercel]
+     C -->|No| E[Notify Team]
+   ```
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+2. Vercel automatically deploys from `main` branch.
+
+## 📂 Project Structure
+
+```
+.
+├── app/
+│   ├── (auth)/               # Auth pages
+│   ├── interview/            # Voice interface
+│   ├── dashboard/            # User history
+│   └── api/                  # API routes
+├── lib/
+│   ├── auth.ts               # NextAuth config
+│   ├── vapi.ts               # Voice client
+│   └── db.ts                 # Prisma client
+├── prisma/                   # DB schema
+├── public/                   # Static assets
+└── styles/                   # Tailwind CSS
+```
+
+## 📈 Roadmap
+
+- [ ] Multi-language support
+- [ ] Custom interview templates
+- [ ] Emotion detection
+- [ ] Mobile app (React Native)
+
+## 🤝 Contributing
+
+1. Fork the project
+2. Clone the forked repo and Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📜 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+## 📧 Author
+
+Nicanor Korir
+```
