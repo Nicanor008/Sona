@@ -4,7 +4,6 @@ const vapiPublicKey = process.env.NEXT_PUBLIC_VAPI_PUBLIC_KEY || '';
 
 const vapi = new Vapi(vapiPublicKey);
 
-// Add types for better TypeScript support
 declare global {
   interface Window {
     vapi?: Vapi;

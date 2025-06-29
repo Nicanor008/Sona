@@ -1,12 +1,13 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Loader2, Save } from 'lucide-react';
 import vapi from '@/lib/vapi';
 import Image from 'next/image';
+import { formatDateTime } from '@/lib/formatDateTime';
 
 interface TranscriptMessage {
   id: string;
-  text: string;
+  text?: string;
   role: 'user' | 'system' | 'assistant';
   isFinal: boolean;
 }
@@ -21,6 +22,26 @@ const VOICE_OPTIONS: Voice[] = [
   { provider: 'playht', voiceId: 'michael' },
 ];
 
+// Simple UUID generator
+const generateUUID = (): string => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
+interface SavedConversation {
+  id: string;
+  date: string;
+  duration: string;
+  messages: TranscriptMessage[];
+  startTime: number;
+  endTime?: number;
+}
+
+  const interviewsInStorage = localStorage.getItem('savedInterviews');
+
 export default function InterviewPage() {
   const [call, setCall] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,52 +51,69 @@ export default function InterviewPage() {
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'active'>('idle');
+  const [savedConversations, setSavedConversations] = useState<SavedConversation[]>([]);
+  const [conversationStartTime, setConversationStartTime] = useState<number | null>(null);
+  const [selectedConversation, setSelectedConversation] = useState<SavedConversation | null>(null);
+
+  const savedInterviewsInStorage = interviewsInStorage ? JSON.parse(interviewsInStorage) : [];
+
+  // Store ongoing message IDs to maintain consistency
+  const [ongoingMessageIds, setOngoingMessageIds] = useState<{[key: string]: string}>({});
   
   // Auto-scroll to bottom when messages update
   useEffect(() => {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // useEffect(() => {
+
+  // }, [interviewsInStorage])
   
   const startInterview = async () => {
     console.log('Starting interview...');
     setIsLoading(true);
     setStatus('connecting');
     setMessages([]); // Clear messages immediately
+    setSelectedConversation(null); // Clear any viewed conversation
+    setConversationStartTime(Date.now()); // Set start time
     
     try {
-      const newCall = await vapi.start({
-        model: {
-          provider: 'openai',
-          model: 'gpt-4-turbo',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a professional job interview coach. Begin by welcoming the candidate and asking them to introduce themselves. Keep questions concise and professional.'
-            },
-            {
-              role: 'assistant',
-              content: 'Welcome to your mock interview. To get started, could you please introduce yourself and tell me about your professional background?'
-            }
-          ]
-        },
-        voice: currentVoice,
-        transcriber: {
-          provider: 'deepgram',
-          model: 'nova-2',
-          language: 'en-US'
-        },
-        firstMessage: 'Welcome to your mock interview. To get started, could you please introduce yourself and tell me about your professional background?'
-      });
-      setCall(newCall);
-      setStatus('active');
-      
-      // Force the first message to appear immediately
-      setMessages(prev => [...prev, {
-        id: 'initial-' + Date.now(),
-        text: 'Welcome to your mock interview. To get started, could you please introduce yourself and tell me about your professional background?',
-        role: 'assistant',
-        isFinal: true
-      }]);
+      setTimeout(async () => {
+        const newCall = await vapi.start({
+          model: {
+            provider: 'openai',
+            model: 'gpt-4-turbo',
+            messages: [
+              {
+                role: 'system',
+                content: 'You are a professional job interview coach. Begin by welcoming the candidate and asking them to introduce themselves. Keep questions concise and professional.'
+              },
+              {
+                role: 'assistant',
+                content: 'Welcome to your mock interview. To get started, could you please introduce yourself and tell me about your professional background?'
+              }
+            ]
+          },
+          voice: currentVoice,
+          transcriber: {
+            provider: 'deepgram',
+            model: 'nova-2',
+            language: 'en-US'
+          },
+          firstMessage: 'Welcome to your mock interview. To get started, could you please introduce yourself and tell me about your professional background?'
+        });
+        setCall(newCall);
+        setStatus('active');
+        
+        // Force the first message to appear immediately with a consistent UUID
+        const initialMessageId = generateUUID();
+        setMessages(prev => [...prev, {
+          id: initialMessageId,
+          text: 'Welcome to your mock interview. To get started, could you please introduce yourself and tell me about your professional background?',
+          role: 'assistant',
+          isFinal: false
+        }]);
+      }, 1500);
       
     } catch (error) {
       console.error('Error starting call:', error);
@@ -85,11 +123,13 @@ export default function InterviewPage() {
       setIsLoading(false);
     }
   };
-  
+
   const stopInterview = async () => {
-    setIsMuted(!isMuted);
     vapi.stop();
     setCall(null);
+   if (conversationStartTime && messages.length > 1) {
+      saveConversation();
+    }
   };
   
   const toggleMute = () => {
@@ -100,58 +140,154 @@ export default function InterviewPage() {
   const changeVoice = (voice: typeof VOICE_OPTIONS[0]) => {
     setCurrentVoice(voice);
   };
+
+  // Fixed save conversation function
+  const saveConversation = () => {
+    const endTime = Date.now();
+    const durationMinutes = conversationStartTime ? Math.round((endTime - conversationStartTime) / 1000 / 60) : 0
+
+    // Get existing saved interviews or initialize as empty array
+
+    const interviewDetails = {
+      id: 1,
+      dateCreated: Date.now(),
+      startTime: conversationStartTime,
+      endTime: endTime,
+      duration: durationMinutes > 0 ? `${durationMinutes} min` : '< 1 min',
+      messageCount: messages.length,
+      interview: messages // Create a copy of the messages array
+    };
+
+    const updatedConversations = [interviewDetails, ...savedInterviewsInStorage]
+
+    // Save updated array back to localStorage
+    localStorage.setItem('savedInterviews', JSON.stringify(updatedConversations));
+
+    // Reset conversation tracking
+    setConversationStartTime(null);
+  };
+
+  const viewConversation = (conversation: SavedConversation) => {
+    setSelectedConversation(conversation);
+    setMessages(conversation.messages);
+  };
+
+  const returnToLive = () => {
+    setSelectedConversation(null);
+    if (!call) {
+      setMessages([]); // Clear messages if no active call
+    }
+  };
+
+  const manualSaveConversation = () => {
+    // saveConversation();
+  };
+  // console.log('..............SAved mess....', localStorage.getItem('savedInterviews'));
   
   useEffect(() => {
     const handleMessage = (message: any) => {
-      if (message.type === 'transcript' || message.type === 'partial-transcript') {
+      if (message.type === 'transcript' || message.transcriptType === 'partial') {
         const role = message.role || (message.speaker === 'user' ? 'user' : 'assistant');
-        const isFinal = message.type === 'transcript';
+        const transcript = message.transcript;
         
         setMessages(prev => {
-          // Find the latest non-final message from the same role
-          const lastMessageIndex = [...prev].reverse().findIndex(msg => 
-            msg.role === role && !msg.isFinal);
-          
-          // If no existing message is found or it's already final, add a new one
-          if (lastMessageIndex === -1 || isFinal) {
-            // Remove previous non-final messages from the same role if this is the final version
-            const filteredMessages = isFinal 
-              ? prev.filter(msg => !(msg.role === role && !msg.isFinal)) 
-              : prev;
-              
-            return [
-              ...filteredMessages,
-              {
-                id: `${role}-${Date.now()}`,
-                text: message.transcript,
+          // For partial messages, try to update the latest non-final message from the same role
+          if (message.transcriptType === 'partial') {
+            const roleKey = `${role}-ongoing`;
+            
+            // Get or create ongoing message ID
+            let messageId = ongoingMessageIds[roleKey];
+            if (!messageId) {
+              messageId = generateUUID();
+              setOngoingMessageIds(prevIds => ({
+                ...prevIds,
+                [roleKey]: messageId
+              }));
+            }
+            
+            // Find existing ongoing message
+            const existingMessage = prev.some(msg => (msg.isFinal === false && msg.role === role) || msg.id === messageId);
+            const existingIndex = prev.findIndex(msg => msg.id === messageId);
+            
+            if (existingMessage) {
+              // Update existing message
+              const updated = [...prev];
+              updated[existingIndex] = {
+                ...updated[existingIndex],
+                text: transcript,
+                isFinal: false
+              };
+              return updated;
+            } else {
+              // Add new ongoing message
+              return [...prev, {
+                id: messageId,
+                text: transcript,
                 role,
-                isFinal
+                isFinal: false
+              }];
+            }
+          } else {
+            // For final messages, check if we have an ongoing message to finalize
+            const roleKey = `${role}-ongoing`;
+            const ongoingId = ongoingMessageIds[roleKey];
+            
+            if (ongoingId) {
+              // Clear the ongoing ID
+              setOngoingMessageIds(prevIds => {
+                const newIds = { ...prevIds };
+                delete newIds[roleKey];
+                return newIds;
+              });
+              
+              // Update the ongoing message to final
+              const existingIndex = prev.findIndex(msg => msg.id === ongoingId);
+              if (existingIndex !== -1) {
+                const updated = [...prev];
+                updated[existingIndex] = {
+                  ...updated[existingIndex],
+                  text: transcript,
+                  isFinal: true
+                };
+                return updated;
               }
-            ];
+            }
+            
+            // For final messages without ongoing message, check for duplicates
+            // Don't add if we already have this exact message from the same role
+            const isDuplicate = prev.some(msg => 
+              msg.role === role && 
+              msg.text === transcript 
+            );
+            
+            if (!isDuplicate) {
+              return [...prev, {
+                id: generateUUID(),
+                text: transcript,
+                role,
+                isFinal: true
+              }];
+            }
+            
+            return prev;
           }
-          
-          // Update the existing non-final message
-          const actualIndex = prev.length - 1 - lastMessageIndex;
-          const updatedMessages = [...prev];
-          updatedMessages[actualIndex] = {
-            ...updatedMessages[actualIndex],
-            text: message.transcript,
-            isFinal
-          };
-          
-          return updatedMessages;
         });
       }
     };
     
     const handleCallEnd = () => {
       setCall(null);
-      setStatus('idle')
+      setStatus('idle');
+      setOngoingMessageIds({}); // Clear ongoing message IDs
+      // if (conversationStartTime && messages.length > 1) {
+      //   saveConversation();
+      // }
     };
     
     const handleError = (error: any) => {
       setStatus('idle');
       setError(error?.message || 'Connection failed');
+      setOngoingMessageIds({}); // Clear ongoing message IDs
       console.error('Vapi error:', error);
     };
     
@@ -162,7 +298,9 @@ export default function InterviewPage() {
     return () => {
       vapi.removeAllListeners();
     };
-  }, []);
+  }, [ongoingMessageIds,  conversationStartTime, messages, selectedConversation]);
+
+  console.log('.............saved....', savedInterviewsInStorage)
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -170,7 +308,40 @@ export default function InterviewPage() {
         <div className="flex gap-8">
           {/* Left Panel - Chat Area */}
           <div className="w-full md:w-2/3 bg-white rounded-xl shadow-sm p-4">
-            <h1 className="text-xl font-bold text-center mb-2 text-gray-800">Witiview - <span className='text-gray-600 text-lg'>Mock Interview</span></h1>
+            {/* <h1 className="text-xl font-bold text-center mb-2 text-gray-800">Witiview - <span className='text-gray-600 text-lg'>Mock Interview</span></h1> */}
+            <div className="flex items-center justify-between mb-2">
+              <h1 className="text-xl font-bold text-gray-800">
+                Witiview - <span className='text-gray-600 text-lg'>Mock Interview</span>
+              </h1>
+              <div className="flex gap-2">
+                {selectedConversation && (
+                  <button
+                    onClick={returnToLive}
+                    className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
+                  >
+                    Back to Live
+                  </button>
+                )}
+                {call && conversationStartTime && messages.length > 1 && (
+                  <button
+                    onClick={manualSaveConversation}
+                    className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
+                  >
+                    <Save size={14} />
+                    Save
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {selectedConversation && (
+              <div className="mb-2 p-2 bg-blue-50 rounded-lg">
+                <p className="text-sm text-blue-800">
+                  Viewing conversation from {selectedConversation.date} 
+                  ({selectedConversation.duration}, {selectedConversation.messageCount} messages)
+                </p>
+              </div>
+            )}
             
             {/* Transcript Container */}
             <div className="h-[calc(100vh-200px)] mb-1 p-2 bg-gray-100 rounded-lg overflow-y-auto">
@@ -208,7 +379,7 @@ export default function InterviewPage() {
                       src="/images/bot-interview.png" 
                       alt="AI Interview Illustration"
                       fill
-                      className="object-contain rounded-xl opacity-82"
+                      className="object-contain opacity-92"
                       priority
                     />
                   </div>
@@ -300,21 +471,43 @@ export default function InterviewPage() {
             </div>
             {/* History Section */}
             <div className="h-[calc(100vh-400px)] overflow-y-auto">
-              <h3 className="font-semibold mb-3 text-gray-700">Session History</h3>
+              <h3 className="font-semibold mb-3 text-gray-700">Past Interviews</h3>
               <div className="space-y-2">
-                {[1, 2, 3].map((item) => (
-                  <div key={item} className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <p className="font-medium text-gray-700">Interview #{item}</p>
-                        <p className="text-sm text-gray-500">2024-03-{10 + item} | 25 minutes</p>
+                {savedInterviewsInStorage?.length > 0 ? (
+                  savedInterviewsInStorage?.map((conversation: any, index: number) => (
+                    <div
+                      key={conversation.id + index}
+                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                        selectedConversation?.id === conversation.id 
+                          ? 'bg-blue-100 border-2 border-blue-300' 
+                          : 'bg-gray-50 hover:bg-gray-100'
+                      }`}
+                      onClick={() => viewConversation(conversation)}
+                    >
+                      <div className="flex justify-between items-center">
+                        <div>
+                          <p className="font-medium text-gray-700">Interview Session #{index + 1}</p>
+                          <p className="text-sm text-gray-500">{formatDateTime(conversation?.dateCreated).fullDateTime} | {conversation.duration}</p>
+                          <p className="text-xs text-gray-400">{conversation.messageCount} messages</p>
+                        </div>
+                        <button 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            viewConversation(conversation);
+                          }}
+                          className="text-blue-600 hover:text-blue-700 text-sm"
+                        >
+                          View
+                        </button>
                       </div>
-                      <button className="text-blue-600 hover:text-blue-700 text-sm">
-                        View Report
-                      </button>
                     </div>
+                  ))
+                ) : (
+                  <div className="text-center text-gray-500 text-sm py-4">
+                    No saved conversations yet.<br />
+                    Complete an interview to see it here.
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </div>
