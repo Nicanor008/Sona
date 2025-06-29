@@ -51,7 +51,6 @@ export default function InterviewPage() {
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'active'>('idle');
-  const [savedConversations, setSavedConversations] = useState<SavedConversation[]>([]);
   const [conversationStartTime, setConversationStartTime] = useState<number | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<SavedConversation | null>(null);
 
@@ -376,7 +375,7 @@ export default function InterviewPage() {
                 <div className="h-full flex flex-col items-center justify-center">
                   <div className="relative w-full h-full max-w-2xl mx-auto">
                     <Image 
-                      src="/images/bot-interview.png" 
+                      src="/images/bot-interview-3.png" 
                       alt="AI Interview Illustration"
                       fill
                       className="object-contain opacity-92"
