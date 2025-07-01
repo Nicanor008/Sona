@@ -1,60 +1,34 @@
 'use client';
+
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Loader2, Save } from 'lucide-react';
 import vapi from '@/lib/vapi';
-import Image from 'next/image';
-import { formatDateTime } from '@/lib/formatDateTime';
-
-interface TranscriptMessage {
-  id: string;
-  text?: string;
-  role: 'user' | 'system' | 'assistant';
-  isFinal: boolean;
-}
-
-interface Voice {
-  provider: string;
-  voiceId: string;
-}
-
-const VOICE_OPTIONS: Voice[] = [
-  { provider: 'playht', voiceId: 'jennifer' },
-  { provider: 'playht', voiceId: 'michael' },
-];
-
-// Simple UUID generator
-const generateUUID = (): string => {
-  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-    const r = Math.random() * 16 | 0;
-    const v = c == 'x' ? r : (r & 0x3 | 0x8);
-    return v.toString(16);
-  });
-};
-
-interface SavedConversation {
-  id: string;
-  date: string;
-  duration: string;
-  messages: TranscriptMessage[];
-  startTime: number;
-  endTime?: number;
-}
-
-  const interviewsInStorage = localStorage.getItem('savedInterviews');
+import { formatDateTime, generateUUID } from '@/utils';
+import { SavedConversation, TranscriptMessage } from '@/types';
+import { VOICE_OPTIONS } from '@/constants';
+import RightSidebar from '@/components/RightSidebar';
+import MessageCard from '@/components/Messages/MessageCard';
+import MessageControls from '@/components/Messages/MessageControls';
 
 export default function InterviewPage() {
   const [call, setCall] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [messages, setMessages] = useState<TranscriptMessage[]>([]);
   const [isMuted, setIsMuted] = useState(false);
-  const [currentVoice, setCurrentVoice] = useState<Voice>(VOICE_OPTIONS[0]);
+  const [currentVoice, setCurrentVoice] = useState<any>(VOICE_OPTIONS[0]);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<'idle' | 'connecting' | 'active'>('idle');
   const [conversationStartTime, setConversationStartTime] = useState<number | null>(null);
   const [selectedConversation, setSelectedConversation] = useState<SavedConversation | null>(null);
 
-  const savedInterviewsInStorage = interviewsInStorage ? JSON.parse(interviewsInStorage) : [];
+  const [savedInterviewsInStorage, setSavedInterviewsInStorage] = useState([]);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('savedInterviews');
+    if (stored) {
+      setSavedInterviewsInStorage(JSON.parse(stored));
+    }
+  }, []);
 
   // Store ongoing message IDs to maintain consistency
   const [ongoingMessageIds, setOngoingMessageIds] = useState<{[key: string]: string}>({});
@@ -64,10 +38,6 @@ export default function InterviewPage() {
     transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // useEffect(() => {
-
-  // }, [interviewsInStorage])
-  
   const startInterview = async () => {
     console.log('Starting interview...');
     setIsLoading(true);
@@ -78,18 +48,14 @@ export default function InterviewPage() {
     
     try {
       setTimeout(async () => {
-        const newCall = await vapi.start({
+        const newCall = await (vapi as any).start({
           model: {
             provider: 'openai',
             model: 'gpt-4-turbo',
             messages: [
               {
                 role: 'system',
-                content: 'You are a professional job interview coach. Begin by welcoming the candidate and asking them to introduce themselves. Keep questions concise and professional.'
-              },
-              {
-                role: 'assistant',
-                content: 'Welcome to your mock interview. To get started, could you please introduce yourself and tell me about your professional background?'
+                content: `You are a friendly and engaging interactive storyteller AI. Your job is to welcome the user warmly, explain that you have a vast collection of exciting, mysterious, funny, and adventurous stories, and ask them what kind of story they would like to hear today. Use a fun and imaginative tone to spark their curiosity.`
               }
             ]
           },
@@ -99,20 +65,27 @@ export default function InterviewPage() {
             model: 'nova-2',
             language: 'en-US'
           },
-          firstMessage: 'Welcome to your mock interview. To get started, could you please introduce yourself and tell me about your professional background?'
+          firstMessage: `Hi there, adventurer! I'm your AI storyteller with tales from every corner of imagination—mysteries, fantasies, comedies, and more! So, what kind of story are you in the mood for today? Something magical, spooky, heroic, or maybe downright silly? I'm all ears!`
         });
+        // messages: [
+        //       {
+        //         role: 'system',
+        //         content: 'You are a professional job interview coach. Begin by welcoming the candidate and asking them to introduce themselves. Keep questions concise and professional.'
+        //       }
+        //     ]
+        //   },
+        //   voice: currentVoice,
+        //   transcriber: {
+        //     provider: 'deepgram',
+        //     model: 'nova-2',
+        //     language: 'en-US'
+        //   },
+        //   firstMessage: 'Welcome to your mock interview. To get started, could you please introduce yourself and tell me about your professional background?'
+        // });
+
         setCall(newCall);
         setStatus('active');
-        
-        // Force the first message to appear immediately with a consistent UUID
-        const initialMessageId = generateUUID();
-        setMessages(prev => [...prev, {
-          id: initialMessageId,
-          text: 'Welcome to your mock interview. To get started, could you please introduce yourself and tell me about your professional background?',
-          role: 'assistant',
-          isFinal: false
-        }]);
-      }, 1500);
+      }, 1000);
       
     } catch (error) {
       console.error('Error starting call:', error);
@@ -148,7 +121,7 @@ export default function InterviewPage() {
     // Get existing saved interviews or initialize as empty array
 
     const interviewDetails = {
-      id: 1,
+      id: generateUUID(),
       dateCreated: Date.now(),
       startTime: conversationStartTime,
       endTime: endTime,
@@ -168,21 +141,8 @@ export default function InterviewPage() {
 
   const viewConversation = (conversation: SavedConversation) => {
     setSelectedConversation(conversation);
-    setMessages(conversation.messages);
   };
 
-  const returnToLive = () => {
-    setSelectedConversation(null);
-    if (!call) {
-      setMessages([]); // Clear messages if no active call
-    }
-  };
-
-  const manualSaveConversation = () => {
-    // saveConversation();
-  };
-  // console.log('..............SAved mess....', localStorage.getItem('savedInterviews'));
-  
   useEffect(() => {
     const handleMessage = (message: any) => {
       if (message.type === 'transcript' || message.transcriptType === 'partial') {
@@ -278,9 +238,6 @@ export default function InterviewPage() {
       setCall(null);
       setStatus('idle');
       setOngoingMessageIds({}); // Clear ongoing message IDs
-      // if (conversationStartTime && messages.length > 1) {
-      //   saveConversation();
-      // }
     };
     
     const handleError = (error: any) => {
@@ -299,217 +256,61 @@ export default function InterviewPage() {
     };
   }, [ongoingMessageIds,  conversationStartTime, messages, selectedConversation]);
 
-  console.log('.............saved....', savedInterviewsInStorage)
-  
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="container mx-auto px-4 py-6">
         <div className="flex gap-8">
           {/* Left Panel - Chat Area */}
           <div className="w-full md:w-2/3 bg-white rounded-xl shadow-sm p-4">
-            {/* <h1 className="text-xl font-bold text-center mb-2 text-gray-800">Witiview - <span className='text-gray-600 text-lg'>Mock Interview</span></h1> */}
             <div className="flex items-center justify-between mb-2">
-              <h1 className="text-xl font-bold text-gray-800">
-                Witiview - <span className='text-gray-600 text-lg'>Mock Interview</span>
-              </h1>
-              <div className="flex gap-2">
-                {selectedConversation && (
-                  <button
-                    onClick={returnToLive}
-                    className="px-3 py-1 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700"
-                  >
-                    Back to Live
-                  </button>
-                )}
-                {call && conversationStartTime && messages.length > 1 && (
-                  <button
-                    onClick={manualSaveConversation}
-                    className="flex items-center gap-1 px-3 py-1 bg-green-600 text-white rounded-md text-sm hover:bg-green-700"
-                  >
-                    <Save size={14} />
-                    Save
-                  </button>
-                )}
+              <div>
+                <h1 className="text-2xl font-bold text-gray-900">
+                  Sona
+                </h1>
+                <p className='text-gray-600 text-sm'>Speak. Listen. Imagine.</p>
               </div>
             </div>
 
             {selectedConversation && (
               <div className="mb-2 p-2 bg-blue-50 rounded-lg">
                 <p className="text-sm text-blue-800">
-                  Viewing conversation from {selectedConversation.date} 
-                  ({selectedConversation.duration}, {selectedConversation.messageCount} messages)
+                  Viewing conversation from {formatDateTime(selectedConversation?.dateCreated).fullDateTime} 
+                  ({selectedConversation?.duration}, {selectedConversation?.messageCount} messages)
                 </p>
               </div>
             )}
             
             {/* Transcript Container */}
-            <div className="h-[calc(100vh-200px)] mb-1 p-2 bg-gray-100 rounded-lg overflow-y-auto">
-              {messages.length > 0 ? (
-                <div className="space-y-3">
-                  {messages.map((message) => (
-                    <div 
-                      key={message.id}
-                      className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div 
-                        className={`max-w-[80%] rounded-lg p-3 ${
-                          message.role === 'user' 
-                            ? 'bg-blue-600 text-white' 
-                            : message.role === 'assistant'
-                              ? 'bg-gray-200 text-gray-800'
-                              : 'bg-purple-100 text-purple-800'
-                        }`}
-                      >
-                        <p className="whitespace-pre-wrap">{message.text}</p>
-                        {!message.isFinal && (
-                          <div className="text-xs opacity-70 mt-1">
-                            {message.role === 'user' ? 'Speaking...' : 'Thinking...'}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  <div ref={transcriptEndRef} />
-                </div>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center">
-                  <div className="relative w-full h-full max-w-2xl mx-auto">
-                    <Image 
-                      src="/images/bot-interview-3.png" 
-                      alt="AI Interview Illustration"
-                      fill
-                      className="object-contain opacity-92"
-                      priority
-                    />
-                  </div>
-                  <p className="text-gray-500 italic text-center mt-4">
-                    Start the interview to begin your practice session, and your transcript will appear here.
-                  </p>
-                </div>
-              )}
-            </div>
+            <MessageCard
+              selectedConversation={selectedConversation}
+              messages={messages}
+              transcriptEndRef={transcriptEndRef}
+            />
+
             {/* Controls */}
-            <div className="sticky bottom-0 bg-white pt-4">
-              <div className="flex justify-center gap-2 flex-wrap">
-                {call ? (
-                  <>
-                    <button
-                      onClick={toggleMute}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-                        isMuted ? 'bg-gray-600 hover:bg-gray-700' : 'bg-blue-600 hover:bg-blue-700'
-                      } text-white transition-colors`}
-                    >
-                      {isMuted ? <MicOff size={18} /> : <Mic size={18} />}
-                      <span className="hidden sm:inline">{isMuted ? 'Unmute' : 'Mute'}</span>
-                    </button>
-                    <button
-                      onClick={stopInterview}
-                      className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
-                    >
-                      <MicOff size={18} />
-                      <span className="hidden sm:inline">End</span>
-                    </button>
-                  </>
-                ) : (
-                  <button
-                    onClick={startInterview}
-                    disabled={isLoading}
-                    className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors disabled:opacity-50"
-                  >
-                    {isLoading ? (
-                      <>
-                        <Loader2 size={20} className="animate-spin" /> Starting...
-                      </>
-                    ) : (
-                      <>
-                        <Mic size={20} /> Start Interview
-                      </>
-                    )}
-                  </button>
-                )}
-              </div>
-            </div>
+            <MessageControls
+              call={call}
+              isMuted={isMuted}
+              toggleMute={toggleMute}
+              stopInterview={stopInterview}
+              startInterview={startInterview}
+              isLoading={isLoading}
+              status={status}
+            />
           </div>
+
           {/* Right Panel - Settings */}
-          <div className="w-full md:w-1/3 bg-white rounded-xl shadow-sm p-2">
-            {/* Voice Selection */}
-            <div className="w-full md:w-1/2 p-2">
-              <div className="mb-2 p-2 bg-gray-50 rounded-lg">
-                <h3 className="font-semibold mb-4 text-gray-700">Voice Settings</h3>
-                <select 
-                  value={currentVoice.voiceId}
-                  onChange={(e) => changeVoice(VOICE_OPTIONS.find(v => v.voiceId === e.target.value)!)}
-                  className="w-full p-2 border rounded-md"
-                >
-                  {VOICE_OPTIONS.map(voice => (
-                    <option key={voice.voiceId} value={voice.voiceId}>
-                      {voice.voiceId}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            {/* Status Indicator */}
-            <div className="p-4 bg-blue-50 rounded-lg my-4">
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className='flex items-center gap-2'>
-                  <div className={`w-3 h-3 rounded-full ${
-                    (status === 'active' || call) ? 'bg-green-500' : 
-                    status === 'connecting' ? 'bg-yellow-500' : 'bg-gray-400'
-                  }`} />
-                  <span className="font-medium">
-                    {(status === 'active' || call) && 'Interview in progress'}
-                    {status === 'connecting' && 'Connecting...'}
-                    {(status === 'idle' && !call) && 'Ready to start'}
-                  </span>
-                </div>
-                &nbsp;&nbsp;&nbsp;
-                <span>{isMuted ? 'Mic muted' : 'Mic is Unmuted'}</span>
-              </div>
-              {error && <p className="text-red-600 text-sm mt-2">{error}</p>}
-            </div>
-            {/* History Section */}
-            <div className="h-[calc(100vh-400px)] overflow-y-auto">
-              <h3 className="font-semibold mb-3 text-gray-700">Past Interviews</h3>
-              <div className="space-y-2">
-                {savedInterviewsInStorage?.length > 0 ? (
-                  savedInterviewsInStorage?.map((conversation: any, index: number) => (
-                    <div
-                      key={conversation.id + index}
-                      className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                        selectedConversation?.id === conversation.id 
-                          ? 'bg-blue-100 border-2 border-blue-300' 
-                          : 'bg-gray-50 hover:bg-gray-100'
-                      }`}
-                      onClick={() => viewConversation(conversation)}
-                    >
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-medium text-gray-700">Interview Session #{index + 1}</p>
-                          <p className="text-sm text-gray-500">{formatDateTime(conversation?.dateCreated).fullDateTime} | {conversation.duration}</p>
-                          <p className="text-xs text-gray-400">{conversation.messageCount} messages</p>
-                        </div>
-                        <button 
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            viewConversation(conversation);
-                          }}
-                          className="text-blue-600 hover:text-blue-700 text-sm"
-                        >
-                          View
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center text-gray-500 text-sm py-4">
-                    No saved conversations yet.<br />
-                    Complete an interview to see it here.
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+          <RightSidebar
+            currentVoice={currentVoice}
+            changeVoice={changeVoice}
+            status={status}
+            call={call}
+            isMuted={isMuted}
+            error={error}
+            savedInterviewsInStorage={savedInterviewsInStorage}
+            selectedConversation={selectedConversation}
+            viewConversation={viewConversation}
+          />
         </div>
       </div>
     </div>

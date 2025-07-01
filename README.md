@@ -1,141 +1,140 @@
-```markdown
-# AI Job Interview Coach
+# 🎙️ Sona
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![CI/CD](https://github.com/yourusername/ai-interview-coach/actions/workflows/main.yml/badge.svg)](https://github.com/yourusername/ai-interview-coach/actions)
-[![Deployed on Vercel](https://vercel.com/button)](https://your-app.vercel.app)
+> **Speak. Listen. Imagine.**  
+> Your AI-powered voice companion for interviews, stories, and beyond.
 
-A voice-powered AI mock interview platform that helps users practice job interviews with real-time feedback and personalized reports.
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-## ✨ Features
+---
 
-- **Realistic Mock Interviews**  
-  - Industry-specific questions (Tech, Sales, Healthcare)
-  - Dynamic follow-up questions based on responses
-- **AI-Powered Analysis**  
-  - Real-time speech metrics (filler words, pace, tone)
-  - GPT-4 generated feedback reports
-- **Flexible Authentication**  
-  - Guest sessions (IP-based tracking)
-  - Google/Email login (after 2 sessions)
-- **Session History**  
-  - Review past performance
-  - Track improvement over time
+**Sona** is a voice-first AI experience platform that simulates interactive conversations — from job interview practice to immersive storytelling. Whether you're prepping for your next big opportunity or exploring magical tales, Sona brings it to life through natural, real-time voice dialogue.
 
-## 🛠 Tech Stack
+---
 
-| Component          | Technology                                                                 |
-|--------------------|---------------------------------------------------------------------------|
-| Frontend           | Next.js 14 (App Router), TypeScript, Tailwind CSS                         |
-| Voice AI           | [Vapi.ai](https://vapi.ai) (`@vapi-ai/web`)                              |
-| Database           | Supabase PostgreSQL (with Prisma ORM)                                    |
-| Authentication     | NextAuth.js (Google + Email/Password)                                    |
-| AI                 | OpenAI GPT-4-turbo (Reports) + Vapi Speech Analytics                     |
-| Hosting            | Vercel (Frontend + Serverless Functions)                                 |
-| CI/CD              | GitHub Actions                                                           |
+## ✨ Key Features
 
-## 📊 Architecture
+### 🧠 AI-Powered Conversations
+- Mock interviews with GPT-4 Turbo
+- Interactive storytelling (fantasy, sci-fi, comedy, more)
+- Real-time voice and text interactions
 
-```mermaid
-flowchart TD
-    A[User] --> B[Next.js Frontend]
-    B --> C[Vapi.ai Voice Stream]
-    C --> D[Next.js API Routes]
-    D --> E[(Supabase DB)]
-    D --> F[OpenAI]
-    G[GitHub Actions] --> H[Vercel]
-```
+### 🎤 Voice-first Experience
+- Powered by Vapi.ai + Deepgram transcription
+- Supports multiple voices and accents
+- Adaptive responses and tone
 
-## 🚀 Getting Started
+### 📚 Conversation History
+- Save and review past interviews or story sessions
+- Track improvement over time
+- Local-first storage (no server required)
+
+---
+
+## ⚙️ Tech Stack
+
+| Layer         | Technology                                                                 |
+|---------------|------------------------------------------------------------------------------|
+| Frontend      | Next.js 14 (App Router), TypeScript, Tailwind CSS                           |
+| Voice Engine  | [Vapi.ai](https://vapi.ai), Deepgram (Real-time speech transcription)        |
+| NLP & AI      | OpenAI GPT-4 Turbo                                                           |
+| Storage       | LocalStorage (client-side saved sessions)                                   |
+| Hosting       | Vercel / CPanel                                                              |
+| CI/CD         | GitHub Actions                                                               |
+
+---
+
+## 🔧 Setup & Installation
 
 ### Prerequisites
 - Node.js v18+
-- Supabase account
-- Vapi.ai API key
-- OpenAI API key
+- OpenAI API Key
+- Vapi.ai API Key
 
-### Installation
-1. Clone the repo:
-   ```bash
-   git clone https://github.com/yourusername/ai-interview-coach.git
-   cd ai-interview-coach
-   ```
+### Clone & Install
+```bash
+git clone https://github.com/yourusername/sona.git
+cd sona
+npm install
+```
 
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
+### Configure Environment
+```bash
+# .env.local
+VAPI_API_KEY="your_vapi_key"
+OPENAI_API_KEY="your_openai_key"
+```
 
-3. Set up environment variables:
-   ```env
-   # .env.local
-   DATABASE_URL="postgresql://..."
-   VAPI_API_KEY="your_vapi_key"
-   OPENAI_API_KEY="your_openai_key"
-   NEXTAUTH_SECRET="your_secret"
-   ```
-
-4. Initialize database:
-   ```bash
-   npx prisma migrate dev
-   ```
-
-### Running Locally
+### Run Locally
 ```bash
 npm run dev
 ```
 
-## 🌐 Deployment
+---
 
-1. Push to GitHub - triggers CI/CD pipeline:
-   ```mermaid
-   flowchart LR
-     A[Git Push] --> B[Run Tests]
-     B --> C{Pass?}
-     C -->|Yes| D[Deploy to Vercel]
-     C -->|No| E[Notify Team]
-   ```
-
-2. Vercel automatically deploys from `main` branch.
-
-## 📂 Project Structure
+## 🗂 Project Structure
 
 ```
 .
 ├── app/
-│   ├── (auth)/               # Auth pages
-│   ├── interview/            # Voice interface
-│   ├── dashboard/            # User history
-│   └── api/                  # API routes
+│   ├── page.tsx           # Voice chat UI
+├── components/              # UI elements (chat, sidebar, controls)
 ├── lib/
-│   ├── auth.ts               # NextAuth config
-│   ├── vapi.ts               # Voice client
-│   └── db.ts                 # Prisma client
-├── prisma/                   # DB schema
-├── public/                   # Static assets
-└── styles/                   # Tailwind CSS
+│   ├── vapi.ts              # Vapi client helper
+│   ├── utils.ts             # Utility functions
+├── public/                  # Static assets
+├── styles/                  # TailwindCSS styles
+└── types/                   # Shared TS types
 ```
 
-## 📈 Roadmap
+---
 
+## 🧭 Current Modes
+
+| Mode         | Description                                           |
+|--------------|-------------------------------------------------------|
+| **Mock Interview** | AI simulates a job interview with real-time questions |
+| **Story Mode**     | Sona asks what kind of story you want and begins the tale |
+| *(More Coming Soon)* | Expand to coaching, training, and educational prompts |
+
+---
+
+## 🛣️ Roadmap
+
+- [ ] Emotion detection through voice tone
+- [ ] Fully customizable personas (e.g., Storyteller, Coach, Therapist)
+- [ ] Story branches and memory
 - [ ] Multi-language support
-- [ ] Custom interview templates
-- [ ] Emotion detection
-- [ ] Mobile app (React Native)
+- [ ] Interactive Video with a robot interface that can recognise different things
+
+---
+
+## 🗂 System Diagram
+![architecture](./public/images/architecture.png)
+
+---
 
 ## 🤝 Contributing
 
-1. Fork the project
-2. Clone the forked repo and Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+We welcome contributions! Here's how to get started:
+
+1. Fork the repo
+2. Create a new branch (`git checkout -b feature/amazing-idea`)
+3. Make changes, commit (`git commit -m "✨ Add amazing idea"`)
+4. Push to your branch (`git push origin feature/amazing-idea`)
+5. Open a pull request
+
+---
 
 ## 📜 License
 
-Distributed under the MIT License. See `LICENSE` for more information.
+MIT License. See [`LICENSE`](./LICENSE) for more.
 
-## 📧 Author
+---
 
-Nicanor Korir
-```
+## 🙋‍♂️ Author
+
+**Nicanor Korir**  
+[LinkedIn](https://linkedin.com/in/nicanorkorir)  
+[Portfolio](https://nicanor.me)
+
+---
