@@ -113,6 +113,11 @@ npm run dev
 
 ---
 
+## Prod Launch Architecture Diagram
+<img width="1013" height="782" alt="image" src="https://github.com/user-attachments/assets/8bc18436-df0e-46f4-8bfc-c4d6c794df2f" />
+
+---
+
 ## 🤝 Contributing
 
 We welcome contributions! Here's how to get started:
