@@ -7,7 +7,7 @@
 
 ---
 
-**Sona** is a voice-first AI experience platform that simulates interactive conversations — from job interview practice to immersive storytelling. Whether you're prepping for your next big opportunity or exploring magical tales, Sona brings it to life through natural, real-time voice dialogue.
+**Sona** is a voice-first AI experience platform that simulates interactive conversations, from job interview practice to immersive storytelling. Whether you're prepping for your next big opportunity or exploring magical tales, Sona brings it to life through natural, real-time voice dialogue.
 
 ---
 
